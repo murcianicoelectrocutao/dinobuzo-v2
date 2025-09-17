@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Buceador Runner</title>
+  <style>
+    body { margin: 0; background: #0e1d40; overflow: hidden; }
+    canvas { display: block; margin: auto; background: linear-gradient(#0e1d40, #05364d); touch-action: manipulation; }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="800" height="300"></canvas>
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    let gameOver = false;
+    let score = 0;
+    let highScore = 0;
+    let speed = 5;
+
+    // Cargar sprites
+    const diverImg = new Image();
+    diverImg.src = "buzo 1.png";
+
+    const coralImg = new Image();
+    coralImg.src = "coral 1.png";
+
+    const sharkImg = new Image();
+    sharkImg.src = "tiburon 1.png";
+
+    // Personaje (buceador)
+    const diver = {
+      x: 50,
+      y: 200,
+      width: 50,
+      height: 50,
+      dy: 0,
+      gravity: 0.6,
+      jumpPower: -10,
+      jump() {
+        if (this.y >= 200) this.dy = this.jumpPower;
+      },
+      update() {
+        this.dy += this.gravity;
+        this.y += this.dy;
+        if (this.y > 200) this.y = 200;
+      },
+      draw() {
+        ctx.drawImage(diverImg, this.x, this.y, this.width, this.height);
+      }
+    };
+
+    // Obstáculos
+    let obstacles = [];
+
+    function spawnObstacle() {
+      let type = Math.random() > 0.5 ? "coral" : "shark";
+      let y, width, height;
+      if (type === "coral") {
+        y = 220;
+        width = 40;
+        height = 60;
+      } else {
+        y = 120 + Math.random() * 60; // tiburones a diferentes alturas
+        width = 60;
+        height = 30;
+      }
+      obstacles.push({
+        x: canvas.width,
+        y,
+        width,
+        height,
+        type
+      });
+    }
+
+    function updateObstacles() {
+      for (let i = 0; i < obstacles.length; i++) {
+        obstacles[i].x -= speed;
+
+        // Colisión
+        if (
+          diver.x < obstacles[i].x + obstacles[i].width &&
+          diver.x + diver.width > obstacles[i].x &&
+          diver.y < obstacles[i].y + obstacles[i].height &&
+          diver.y + diver.height > obstacles[i].y
+        ) {
+          gameOver = true;
+          if (score > highScore) highScore = score;
+        }
+      }
+      obstacles = obstacles.filter(o => o.x > -50);
+    }
+
+    function drawObstacles() {
+      obstacles.forEach(o => {
+        if (o.type === "coral") {
+          ctx.drawImage(coralImg, o.x, o.y - o.height + 40, o.width, o.height); // coral desde abajo
+        } else {
+          ctx.drawImage(sharkImg, o.x, o.y, o.width, o.height);
+        }
+      });
+    }
+
+    // Juego principal
+    let frames = 0;
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (gameOver) {
+        ctx.fillStyle = "white";
+        ctx.font = "30px Arial";
+        ctx.fillText("Game Over!", 320, 130);
+        ctx.fillText("Score: " + score, 340, 170);
+        ctx.fillText("High Score: " + highScore, 310, 210);
+        ctx.fillText("Toca para reiniciar", 280, 250);
+        return;
+      }
+
+      diver.update();
+      diver.draw();
+
+      if (frames % 90 === 0) spawnObstacle();
+      updateObstacles();
+      drawObstacles();
+
+      score++;
+      if (score % 200 === 0) speed += 0.5; // aumenta dificultad
+
+      ctx.fillStyle = "white";
+      ctx.font = "20px Arial";
+      ctx.fillText("Score: " + score, 10, 30);
+      ctx.fillText("High: " + highScore, 10, 55);
+
+      frames++;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function restartGame() {
+      gameOver = false;
+      score = 0;
+      speed = 5;
+      frames = 0;
+      obstacles = [];
+      diver.y = 200;
+      diver.dy = 0;
+      gameLoop();
+    }
+
+    // Controles: toque o clic
+    canvas.addEventListener("click", () => {
+      if (!gameOver) {
+        diver.jump();
+      } else {
+        restartGame();
+      }
+    });
+
+    canvas.addEventListener("touchstart", e => {
+      e.preventDefault();
+      if (!gameOver) {
+        diver.jump();
+      } else {
+        restartGame();
+      }
+    });
+
+    gameLoop();
+  </script>
+</body>
+</html>
